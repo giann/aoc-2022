@@ -1,0 +1,34 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day01.txt", mode: FileMode.read);
+
+    int top1Calories = 0;
+    int top2Calories = 0;
+    int top3Calories = 0;
+    int elfCalories = 0;
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        if (line?.len() ?? 0 == 0) {
+            if (elfCalories > top1Calories) {
+                top3Calories = top2Calories;
+                top2Calories = top1Calories;
+                top1Calories = elfCalories;
+            } else if (elfCalories > top2Calories) {
+                top3Calories = top2Calories;
+                top2Calories = elfCalories;
+            } else if (elfCalories > top3Calories) {
+                top3Calories = elfCalories;
+            }
+
+            elfCalories = 0;
+        } else {
+            elfCalories = elfCalories + parseInt(line ?? "") ?? 0;
+        }
+    }
+
+    file.close();
+
+    print("Top 3 calories: {top1Calories + top2Calories + top3Calories}");
+}
