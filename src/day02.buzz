@@ -1,0 +1,69 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+{str, int} shapeScore = {
+    "A": 1, | Rock
+    "B": 2, | Paper
+    "C": 3, | Scissors
+    "X": 1, | Rock
+    "Y": 2, | Paper
+    "Z": 3, | Scissors
+};
+
+{str, str} shapeBeats = {
+    "A": "Z", | Rock beats scissors
+    "B": "X", | Paper beats rock
+    "C": "Y", | Scissors beats paper
+    "X": "C",
+    "Y": "A",
+    "Z": "B",
+};
+
+{str, str} shapeLoses = {
+    "A": "B", | Rock loses to paper
+    "B": "C", | Paper loses to scissors
+    "C": "A", | Scissors loses to rock
+};
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day02.txt", mode: FileMode.read);
+
+    | Score if input was shape to play
+    int score = 0;
+    | Score if input was action to take
+    int actionScore = 0;
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        str elfShape = line![0];
+        str myShape = line![2];
+
+        | If input is shape to play
+        int round = shapeScore[myShape] ?? 0;
+        if (shapeBeats[myShape] == elfShape) {
+            | Won
+            round = round + 6;
+        } else if (shapeBeats[elfShape] != myShape) {
+            | Draw
+            round = round + 3;
+        }
+
+        score = score + round;
+
+        | If input is move to make
+        if (myShape == "X") {
+            | Lose
+            actionScore = actionScore + shapeScore[shapeBeats[elfShape] ?? ""] ?? 0;
+        } else if (myShape == "Y") {
+            | Draw
+            actionScore = actionScore + shapeScore[elfShape] ?? 0 + 3;
+        } else {
+            | Win
+            actionScore = actionScore + shapeScore[shapeLoses[elfShape] ?? ""] ?? 0 + 6;
+        }
+    }
+
+    print("Total score: {score}");
+    print("Total action score: {actionScore}");
+
+    file.close();
+}
