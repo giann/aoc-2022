@@ -1,0 +1,56 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+fun getItemPriority(str item) > int {
+    int itemPriority = item.byte(0);
+
+    | Lowercase
+    if (itemPriority >= 97) {
+        return (itemPriority - 96);
+    } else { | Upper case
+        return ((itemPriority - 64) + 26);
+    }
+
+    return 0;
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day03.txt", mode: FileMode.read);
+
+    int prioritiesSum = 0;
+    int groupBadgePrioritiesSum = 0;
+    [str] group = [<str>];
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        str rucksack = line ?? "";
+        str compartment1 = rucksack.sub(0, len: rucksack.len() / 2);
+        str compartment2 = rucksack.sub(rucksack.len() / 2);
+
+        | Part 1: find common item in both compartments of each rucksack
+        foreach (int index, str item in compartment1) {
+            if (compartment2.indexOf(item) != null) {
+                prioritiesSum = prioritiesSum + getItemPriority(item);
+                break;
+            }
+        }
+
+        | Part 2: find common item in rucksack of each group of three elves
+        group.append(rucksack);
+
+        if (group.len() == 3) {
+            foreach (int index, str item in group[0]) {
+                if (group[1].indexOf(item) != null and group[2].indexOf(item) != null) {
+                    groupBadgePrioritiesSum = groupBadgePrioritiesSum + getItemPriority(item);
+                    break;
+                }
+            }
+
+            group = [<str>];
+        }
+    }
+
+    print("Sum of misplaced items priorities: {prioritiesSum}");
+    print("Sum of each group badge priorities: {groupBadgePrioritiesSum}");
+
+    file.close();
+}
