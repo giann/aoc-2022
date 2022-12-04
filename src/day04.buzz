@@ -1,0 +1,45 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+object Range {
+    int lo,
+    int hi,
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day04.txt", mode: FileMode.read);
+    
+    int fullyContainedPairsCount = 0;
+    int overlappingPairs = 0;
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        [str] ranges = (line ?? "").split(",");
+
+        [str] range1 = ranges[0].split("-");
+        Range elf1 = Range{
+            lo = parseInt(range1[0]) ?? 0,
+            hi = parseInt(range1[1]) ?? 0,
+        };
+
+        [str] range2 = ranges[1].split("-");
+        Range elf2 = Range{
+            lo = parseInt(range2[0]) ?? 0,
+            hi = parseInt(range2[1]) ?? 0,
+        };
+
+        if ((elf1.lo <= elf2.lo and elf2.hi <= elf1.hi)
+            or (elf2.lo <= elf1.lo and elf1.hi <= elf2.hi)) {
+            fullyContainedPairsCount = fullyContainedPairsCount + 1;
+        }
+
+        if ((elf1.lo <= elf2.hi and elf1.lo >= elf2.lo)
+            or (elf2.lo <= elf1.hi and elf2.lo >= elf1.lo)) {
+            overlappingPairs = overlappingPairs + 1;
+        }
+    }
+
+    print("Assignment pairs with one range containing the other: {fullyContainedPairsCount}");
+    print("Overlapping pairs: {overlappingPairs}");
+
+    file.close();
+}
