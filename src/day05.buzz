@@ -1,0 +1,90 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day05.txt", mode: FileMode.read);
+
+    | Part 1
+    [[str]] stacks = [<[str]>];
+    | Part 2
+    [[str]] stacks2 = [<[str]>];
+
+    | Parse stacks init
+    for (str? line = file.readLine(), bool parseComplete = false; !parseComplete and line != null; line = file.readLine()) {
+        for (int offset = 0, int stack = 0; offset + 1 < (line?.len() ?? 0) - 1; offset = offset + 4, stack = stack + 1) {
+            | [A]
+            |  ^
+            str item = (line ?? "")[offset + 1];
+
+            | Is this the legend?
+            if (parseInt(item) != null) {
+                parseComplete = true;
+                break;
+            }
+
+            if (stack > stacks.len() - 1) {
+                stacks.append([<str>]);
+                stacks2.append([<str>]);
+            }
+
+            if (item.len() > 0 and item != " ") {
+                stacks[stack].insert(0, value: item);
+                stacks2[stack].insert(0, value: item);
+            }
+        }
+    }
+
+    | Move crates
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        pat movePattern = _move (\d+) from (\d) to (\d+)_;   
+        [str] captures = movePattern.match(line ?? "") ?? [<str>];
+
+        if (captures.len() > 0) {
+            int qty = parseInt(captures[1]) ?? 0;
+            int start = (parseInt(captures[2]) ?? 0) - 1;
+            int end = (parseInt(captures[3]) ?? 0) - 1;
+
+            | Part 1
+            for (int n = 0; n < qty; n = n + 1) {
+                assert(stacks[start].len() > 0, message: "Stack should not be empty");
+
+                stacks[end].append(stacks[start].pop());
+            }
+
+            | Part 2
+            [str] crates = [<str>];
+            if (qty > 1) {
+                crates = stacks2[start].sub(stacks2[start].len() - qty);
+                for (int n = 0; n < qty; n = n + 1) {
+                    stacks2[end].append(crates[n]);
+                    stacks2[start].pop();
+                }
+            } else {
+                stacks2[end].append(stacks2[start].pop());
+            }
+        }
+    }
+
+    [str] top = [<str>];
+    foreach (int index, [str] stack in stacks) {
+        if (stack.len() > 0) {
+            top.append(stack[stack.len() - 1]);
+        } else {
+            top.append(" ");
+        }
+    }
+    print("Top of stacks with CrateMover 9000 are: {top.join("")}");
+
+    top = [<str>];
+    foreach (int index, [str] stack in stacks2) {
+        if (stack.len() > 0) {
+            top.append(stack[stack.len() - 1]);
+        } else {
+            top.append(" ");
+        }
+    }
+    print("Top of stacks with CrateMover 9001 are: {top.join("")}");
+    
+    file.close();
+}
