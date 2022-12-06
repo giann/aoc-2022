@@ -1,0 +1,57 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+| Return `true` if no char is repeated in the buffer
+fun distinct([str] buffer) > bool {
+    {str, bool} occurences = {<str, bool>};
+    foreach (int i, str c in buffer) {
+        if (occurences[c] ?? false) {
+            return false;
+        }
+
+        occurences[c] = true;
+    }
+
+    return true;
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day06.txt", mode: FileMode.read);
+    
+    if (file.readLine() -> signal) {
+        [str] packetMarker = [<str>];
+        [str] messageMarker = [<str>];
+        int? packetMarkerOffset = null;
+        int? messageMarkerOffset = null;
+        foreach (int offset, str char in signal) {
+            | Keep buffer of four last chars for the packet marker
+            if (packetMarker.len() >= 4) {
+                packetMarker.remove(0);
+            }
+            packetMarker.append(char);
+
+            | Keep buffer of 14 last chars for the message marker
+            if (messageMarker.len() >= 14) {
+                messageMarker.remove(0);
+            }
+            messageMarker.append(char);
+
+            if (packetMarkerOffset == null and packetMarker.len() == 4 and distinct(packetMarker)) {
+                packetMarkerOffset = offset + 1;
+            } else if (messageMarkerOffset == null and messageMarker.len() == 14 and distinct(messageMarker)) {
+                messageMarkerOffset = offset + 1;
+            }
+
+            | If found both, stop
+            if (messageMarkerOffset != null and packetMarkerOffset != null) {
+                break;
+            }
+        }
+
+        print("Found packet marker at offset {packetMarkerOffset}");
+        print("Found message marker at offset {messageMarkerOffset}");
+    }
+    
+    file.close();
+}
