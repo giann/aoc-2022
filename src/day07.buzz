@@ -1,0 +1,53 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+import "lib/debug" as debug;
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day07.txt", mode: FileMode.read);
+    
+    {str, int} dirSizes = {<str, int>};
+    [str] currentPath = [<str>];
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        pat commandPattern = _\$ ([a-z]+) (.+)_;
+
+        if (commandPattern.match(line ?? "") -> captures) {
+            if (captures[1] == "cd") {
+                if (captures[2] == "..") {
+                    currentPath.pop();
+                } else {
+                    currentPath.append(captures[2]);
+                }
+            }
+        } else { | listed files
+            pat filePattern = _(\d+) .+_;
+            
+            if (filePattern.match(line ?? "") -> captures) {
+                foreach (int i, str path in currentPath.sub(0)) {
+                    | In case two dir with the same name in different part of the file tree
+                    str fullpath = currentPath.sub(0, len: i + 1).join("/");
+
+                    dirSizes[fullpath] = (dirSizes[fullpath] ?? 0) + (parseInt(captures[1]) ?? 0);
+                }
+            }
+        }
+    }
+
+    int sum = 0;
+    const int freeSpace = 70000000 - (dirSizes["/"] ?? 0);
+    str? deleteCandidate = null;
+    foreach(str dir, int size in dirSizes) {
+        if (dir != "/" and size <= 100000) {
+            sum = sum + size;
+        }
+
+        | Would freeing this dir free up enough space and is this the smallest candidate for deletion?
+        if (freeSpace + size >= 30000000 and (deleteCandidate == null or (dirSizes[deleteCandidate ?? ""] ?? 0) > size)) {
+            deleteCandidate = dir;
+        }
+    }
+    print("Sum of directories of at most 100000: {sum}");
+    print("We should delete {deleteCandidate} of size {dirSizes[deleteCandidate ?? ""]}");
+
+    file.close();
+}
