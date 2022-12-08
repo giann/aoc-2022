@@ -1,0 +1,157 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+object Tree {
+    int height,
+    bool visible = false,
+}
+
+object State {
+    int highestTree = -1,
+    int visibleTrees = 0,
+
+    fun update(Tree tree) > void {
+        if (tree.height <= this.highestTree) {
+            return;
+        }
+        
+        this.highestTree = tree.height;
+    
+        if (!tree.visible) {
+            tree.visible = true;
+            this.visibleTrees = this.visibleTrees + 1;
+        }
+    }
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day08.txt", mode: FileMode.read);
+
+    | Parse grid
+    [[Tree]] grid = [<[Tree]>];
+    int height = 0;
+    int width = 0;
+    for (str? line = file.readLine(), int y = 0; line != null; line = file.readLine(), y = y + 1) {
+        if (grid.len() - 1 < y) {
+            grid.append([<Tree>]);
+        }
+
+        foreach (int x, str tree in line ?? "") {
+            grid[y].append(
+                Tree{
+                    height = parseInt(tree) ?? 0,
+                }
+            );
+        }
+
+        height = y + 1;
+        width = grid[y].len();
+    }
+
+    State state = State{};
+
+    | What's visible from left edge
+    foreach (int y, [Tree] row in grid) {
+        state.highestTree = -1;
+        foreach (int x, Tree tree in row) {
+            state.update(tree);
+        }
+    }
+
+    | What's visible from top edge
+    for (int x = 0; x < width; x = x + 1) {
+        state.highestTree = -1;
+        for (int y = 0; y < height; y = y + 1) {
+            Tree tree = grid[y][x];
+
+            state.update(tree);
+        }
+    }
+
+    | What's visible from right edge
+    foreach (int y, [Tree] row in grid) {
+        state.highestTree = -1;
+        for (int x = width - 1; x >= 0; x = x - 1) {
+            Tree tree = row[x];
+
+            state.update(tree);
+        }
+    }
+
+    | What's visible from bottom edge
+    for (int x = 0; x < width; x = x + 1) {
+        state.highestTree = -1;
+        for (int y = height - 1; y > 0; y = y - 1) {
+            Tree tree = grid[y][x];
+
+            state.update(tree);
+        }
+    }
+
+    print("Trees visible from edge of the grid: {state.visibleTrees}");
+
+    int maxScenicScore = 0;
+    foreach (int y, [Tree] row in grid) {
+        foreach (int x, Tree tree in row) {
+            int visibleLeft = 0;
+            int visibleRight = 0;
+            int visibleUp = 0;
+            int visibleDown = 0;
+
+            | Left
+            for (int dx = x - 1; dx >= 0; dx = dx - 1) {
+                Tree dtree = grid[y][dx];
+
+                visibleLeft = visibleLeft + 1;
+
+                if (dtree.height >= tree.height) {
+                    break;
+                }
+            }
+
+            | Right
+            for (int dx = x + 1; dx < width; dx = dx + 1) {
+                Tree dtree = grid[y][dx];
+                
+                visibleRight = visibleRight + 1;
+
+                if (dtree.height >= tree.height) {
+                    break;
+                }
+            }
+
+            | Down
+            for (int dy = y + 1; dy < height; dy = dy + 1) {
+                Tree dtree = grid[dy][x];
+                
+                visibleDown = visibleDown + 1;
+
+                if (dtree.height >= tree.height) {
+                    break;
+                }
+            }
+
+            | Up
+            for (int dy = y - 1; dy >= 0; dy = dy - 1) {
+                Tree dtree = grid[dy][x];
+
+                visibleUp = visibleUp + 1;
+
+                if (dtree.height >= tree.height) {
+                    break;
+                }
+            }
+
+            int scenicScore = visibleLeft * visibleRight * visibleDown * visibleUp;
+
+            if (scenicScore > maxScenicScore) {
+                maxScenicScore = scenicScore;
+            }
+        }
+    }
+
+    print("Max scenic score available is {maxScenicScore}");
+
+    file.close();
+}
