@@ -1,0 +1,109 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+import "lib/debug" as debug;
+
+object Knot {
+    int x,
+    int y,
+}
+
+fun abs(int n) > int {
+    if (n < 0) {
+        return n *  -1;
+    }
+
+    return n;
+}
+
+| Move head one step towards direction and move tail accordingly
+fun moveKnots(Knot head, Knot tail, str direction) > void {
+    const int dx = abs(head.x - tail.x);
+    const int dy = abs(head.y - tail.y);
+
+    | If the head is ever two steps directly up, down, left, or right from the tail,
+    | the tail must also move one step in that direction so it remains close enough
+    Knot previousHead = Knot{ x = head.x, y = head.y };
+    Knot previousTail = Knot{ x = tail.x, y = tail.y };
+
+    bool movedX = false;
+    bool movedY = false;
+    if (dx > 1) {
+        if (head.x > tail.x) {
+            tail.x = tail.x + 1;
+        } else {
+            tail.x = tail.x - 1;
+        }
+        movedX = true;
+    } else if (dy > 1) {
+        if (head.y > tail.y) {
+            tail.y = tail.y + 1;
+        } else {
+            tail.y = tail.y - 1;
+        }
+        movedY = true;
+    }
+
+    | If the head and tail aren't touching and aren't in the same row or column,
+    | the tail always moves one step diagonally to keep up
+    if ((dx > 1 or dy > 1) and previousHead.x != tail.x and previousHead.y != previousTail.y) {
+        if (movedY and head.x > tail.x) {
+            tail.x = tail.x + 1;
+        } else if (movedY and head.x < tail.x) {
+            tail.x = tail.x - 1;
+        } else if (movedX and head.y > tail.y) {
+            tail.y = tail.y + 1;
+        } else if (movedX and head.y < tail.y) {
+            tail.y = tail.y - 1;
+        }
+    }
+}
+
+fun moveRope(int ropeLength) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day09.txt", mode: FileMode.read);
+
+    | Distance between tail and head
+    [Knot] rope = [<Knot>];
+    for (int i = 0; i < ropeLength; i = i + 1) {
+        rope.append(Knot{ x = 0, y = 0 });
+    }
+
+    Knot head = rope[0];
+    Knot tail = rope[rope.len() - 1];
+
+    {str, bool} locationVisited = {<str, bool>};
+    
+    for (str? line = file.readLine(), bool parseComplete = false; !parseComplete and line != null; line = file.readLine()) {
+        const str direction = (line ?? "")[0];
+        const int distance = parseInt((line ?? "").sub(2)) ?? 0;
+
+        for (int d = 1; d <= distance; d = d + 1) {
+            foreach (int index, Knot knot in rope) {
+                if (index == 0) { | Move head
+                    if (direction == "R") {
+                        knot.x = knot.x + 1;
+                    } else if (direction == "L") {
+                        knot.x = knot.x - 1;
+                    } else if (direction == "D") {
+                        knot.y = knot.y + 1;
+                    } else if (direction == "U") {
+                        knot.y = knot.y - 1;
+                    }
+                } else { | Move knot according to its previous knot movement
+                    moveKnots(head: rope[index - 1], tail: knot, direction: direction);
+                }
+            }
+
+            locationVisited["{tail.x},{tail.y}"] = true;
+        }
+    }
+
+    print("Tail visited {locationVisited.keys().len()} locations");
+
+    file.close();
+}
+
+fun main([str] args) > void {
+    moveRope(2) catch void;
+    moveRope(10) catch void;
+}
