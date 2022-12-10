@@ -1,7 +1,6 @@
 import "lib/std";
 import "lib/io";
 import "lib/errors";
-import "lib/debug" as debug;
 
 object Knot {
     int x,

@@ -1,0 +1,131 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+object Addx {
+    int cycle,
+    int value,
+}
+
+object Instruction {
+    str instruction,
+    int? value = null,
+}
+
+object CPU {
+    int X = 1,
+    int cycle = 1,
+
+    Addx? pending = null,
+}
+
+object CRT {
+    [[str]] screen,
+
+    | Pixel to draw
+    int dx = 0,
+    int dy = 0,
+
+    static fun init() > CRT {
+        [[str]] screen = [<[str]>];
+        for (int x = 0; x < 40; x = x + 1) {
+            screen.append([<str>]);
+            for (int y = 0; y < 6; y = y + 1) {
+                screen[x].append(".");
+            }
+        }
+
+        return CRT{
+            screen = screen,
+        };
+    }
+
+    fun step(int X) > void {
+        if (X >= this.dx - 1 and X <= this.dx + 1) {
+            this.screen[this.dx][this.dy] = "#";
+        }
+
+        this.dx = this.dx + 1;
+        if (this.dx >= 40) {
+            this.dx = 0;
+            this.dy = this.dy + 1;
+        }
+
+        if (this.dy >= 6) {
+            this.dy = 0;
+        }
+    }
+
+    fun draw() > void {
+        for (int y = 0; y < 6; y = y + 1) {
+            for (int x = 0; x < 40; x = x + 1) {
+                stdout.write(this.screen[x][y]) catch void;
+            }
+            stdout.write("\n") catch void;
+        }
+    }
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day10.txt", mode: FileMode.read);
+    const pat instructionPattern = _(addx|noop)( -?\d+)?_;
+
+    | Parse instructions
+    [Instruction] instructions = [<Instruction>];
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        [str] match = instructionPattern.match(line ?? "") ?? [<str>];
+
+        assert(match.len() > 0, message: "malformed instruction");
+
+        Instruction instr = Instruction{
+            instruction = match[1],
+        };
+
+        if (instr.instruction == "addx") {
+            instr.value = parseInt(match[2].trim()) ?? 0;
+        }
+
+        instructions.append(instr);
+    }
+
+    | Run cpu cycles
+    CPU cpu = CPU{};
+    CRT crt = CRT.init();
+    int signalStrength = 0;
+    int nextSignalCollect = 20;
+    for (int index = 0;  index < instructions.len(); cpu.cycle = cpu.cycle + 1) {
+        if (cpu.pending?.cycle == cpu.cycle) {
+            cpu.X = cpu.X + cpu.pending?.value ?? 0;
+            cpu.pending = null;
+        }
+        
+        if (cpu.pending == null) {
+            if (index >= instructions.len()) {
+                break;
+            }
+
+            Instruction instr = instructions[index];
+            if (instr.instruction == "addx") {
+                cpu.pending = Addx{
+                    cycle = cpu.cycle + 2,
+                    value = instr.value ?? 0,
+                };
+            }
+
+            index = index + 1;
+        }
+
+        if (cpu.cycle == nextSignalCollect) {
+            nextSignalCollect = nextSignalCollect + 40;
+            signalStrength = signalStrength + (cpu.X * cpu.cycle);
+        }
+
+        crt.step(cpu.X);
+    }
+
+    crt.draw();
+
+    print("Signal strength sum is {signalStrength}");
+
+    file.close();
+}
