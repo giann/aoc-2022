@@ -1,0 +1,104 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+import "lib/debug";
+
+object Monkey {
+    [int] inventory,
+    [str] operation,
+    int divisibleBy,
+    int ifTrue,
+    int ifFalse,
+
+    int inspectedItems = 0,
+}
+
+fun simulate(int rounds, int relief) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day11.txt", mode: FileMode.read);
+    str input = file.readAll();
+
+    pat monkeyPattern = _Monkey \d+:\n\s+Starting items: ([0-9, ]+)\n\s+Operation: new = ([a-z0-9]+) ([*+]) ([a-z0-9]+)\n\s+Test: divisible by (\d+)\n\s+If true: throw to monkey (\d+)\n\s+If false: throw to monkey (\d+)_;
+    [Monkey] monkeys = [<Monkey>];
+    foreach (int index, [str] match in monkeyPattern.matchAll(input) ?? [[<str>]]) {
+        monkeys.append(
+            Monkey{
+                inventory = match[1].split(", ").map(<int>, fun (int i, str element) -> parseInt(element) ?? 0),
+                operation = [match[2], match[3], match[4]],
+                divisibleBy = parseInt(match[5]) ?? 0,
+                ifTrue = parseInt(match[6]) ?? 0,
+                ifFalse = parseInt(match[7]) ?? 0,
+            }
+        );
+    }
+
+    file.close();
+
+    | Part 2
+    int? mod = null;
+    if (relief == 1) {
+        mod = 1;
+        foreach (int index, Monkey monkey in monkeys) {
+            mod = mod * monkey.divisibleBy;
+        }
+    }
+
+    for (int round = 0; round < rounds; round = round + 1) {
+        foreach (int index, Monkey monkey in monkeys) {
+            foreach (int i, int worry in monkey.inventory) {
+                monkey.inspectedItems = monkey.inspectedItems + 1;
+
+                int left = worry;
+                if (parseInt(monkey.operation[0]) -> value) {
+                    left = value;
+                }
+
+                int right = worry;
+                if (parseInt(monkey.operation[2]) -> value) {
+                    right = value;
+                }
+
+                if (monkey.operation[1] == "*") {
+                    worry = left * right;
+                } else {
+                    assert(monkey.operation[1] == "+", message: "expected `+`");
+
+                    worry = left + right;
+                }
+
+                if (relief != 1) { | Part 1
+                    worry = toInt(toFloat(worry) / toFloat(relief));
+                } else if (mod -> umod) { | Part 2
+                    worry = worry % umod;
+                }
+
+                if (worry % monkey.divisibleBy == 0) {
+                    monkeys[monkey.ifTrue].inventory.append(worry);
+                } else {
+                    monkeys[monkey.ifFalse].inventory.append(worry);
+                }
+            }
+
+            | Monkeys always throws all its item
+            monkey.inventory = [<int>];
+        }
+    }
+
+    int mostActive = 0;
+    int secondMostActive = 0;
+    foreach (int i, Monkey monkey in monkeys) {
+        if (monkey.inspectedItems > mostActive) {
+            secondMostActive = mostActive;
+            mostActive = monkey.inspectedItems;
+        } else if (monkey.inspectedItems > secondMostActive) {
+            secondMostActive = monkey.inspectedItems;
+        }
+    }
+
+    print("Monkey business after {rounds} rounds: {mostActive * secondMostActive}");
+}
+
+fun main([str] args) > void {
+    simulate(rounds: 20, relief: 3) catch void;
+    | Integer overflow ?!
+    simulate(rounds: 10000, relief: 1) catch void;
+}
