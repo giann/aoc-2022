@@ -1,0 +1,154 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+import "lib/math" as math;
+import "lib/debug";
+
+object Location {
+    int x = 0,
+    int y = 0,
+    int distance = 0,
+
+    fun inbound(int width, int height) > bool
+        -> this.x >= 0 and this.x < width
+            and this.y >= 0 and this.y < height
+    
+    fun neighbors(int width, int height) > [Location]
+        -> [
+            Location{ x = this.x - 1, y = this.y     },
+            Location{ x = this.x,     y = this.y - 1 },
+            Location{ x = this.x + 1, y = this.y     },
+            Location{ x = this.x,     y = this.y + 1 },
+        ].filter(fun (int intex, Location l) -> l.inbound(width, height: height))
+
+    fun toString() > str -> "{this.x},{this.y}"
+}
+
+fun height(str char) > int {
+    if (char == "S") {
+        return "a".byte(0);
+    } else if (char == "E") {
+        return "z".byte(0);
+    }
+
+    return char.byte(0);
+}
+
+fun getPossibleSteps([[str]] grid, {str, bool} visited, Location current) > [Location] {
+    [Location] result = [<Location>];
+    const int currentHeight = height(grid[current.y][current.x]);
+
+    foreach (int i, Location neighbor in current.neighbors(grid[0].len(), height: grid.len())) {
+        const int neighborHeight = height(grid[neighbor.y][neighbor.x]);
+
+        if (visited[neighbor.toString()] == null and neighborHeight - currentHeight <= 1) {
+            result.append(neighbor);
+        }
+    }
+
+    return result;
+}
+
+fun printGrid([[str]] grid, {str, bool} visited, Location start, Location destination) > void {
+    try {
+        foreach (int y, [str] row in grid) {
+            foreach (int x, str cell in row) {
+                if (x == start.x and y == start.y) {
+                    stdout.write("S");
+                } else if (visited["{x},{y}"] != null) {
+                    stdout.write("\27[2m{cell}\27[0m");
+                } else if (x == destination.x and y == destination.y) {
+                    stdout.write("E");
+                } else {
+                    stdout.write(cell);
+                }
+            }
+            stdout.write("\n");
+        }
+        stdout.write("\n");
+    } catch {
+
+    }
+}
+
+fun bdf([[str]] grid, Location start, Location destination) > int {
+    {str, bool} visited = { start.toString(): true };
+    [Location] queue = [start];
+    while (queue.len() > 0) {
+        Location current = queue.remove(0)!;
+
+        | print("{current.toString()} dist {current.distance}");
+        | printGrid(
+        |     grid: grid,
+        |     visited: visited,
+        |     start: start,
+        |     destination: destination,
+        | );
+
+        if (current.x == destination.x and current.y == destination.y) {
+            return current.distance;
+        }
+
+        foreach (int i, Location neighbor in getPossibleSteps(grid, visited: visited, current: current)) {
+            visited[neighbor.toString()] = true;
+            queue.append(
+                Location{
+                    x = neighbor.x,
+                    y = neighbor.y,
+                    distance = current.distance + 1,
+                }
+            );
+        }
+    }
+
+    return -1;
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day12.txt", mode: FileMode.read);
+    
+    [[str]] grid = [<[str]>];
+    Location start = Location{};
+    [Location] starts = [<Location>];
+    Location destination = Location{};
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        grid.append(line?.split("") ?? [""]);
+
+        foreach (int i, str char in grid[grid.len() -1]) {
+            if (char == "S") {
+                start = Location{
+                    y = grid.len() - 1,
+                    x = i,
+                };
+                starts.append(start);
+            } else if (char == "a") {
+                starts.append(
+                    Location{
+                       y = grid.len() - 1,
+                        x = i,
+                    }
+                );
+            } else if (char == "E") {
+                destination = Location{
+                    y = grid.len() - 1,
+                    x = i,
+                };
+            }
+        }
+    }
+
+    file.close();
+
+    bdf(grid, start: start, destination: destination);
+
+    int? fastest = null;
+    foreach (int i, Location start in starts) {
+        int distance = bdf(grid, start: start, destination: destination);
+
+        if (fastest == null or distance < fastest!) {
+            fastest = distance;
+        }
+    }
+
+    print("Fastest route to `E` from any `a`: {fastest}");
+}

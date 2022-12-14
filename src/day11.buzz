@@ -1,7 +1,6 @@
 import "lib/std";
 import "lib/io";
 import "lib/errors";
-import "lib/debug";
 
 object Monkey {
     [int] inventory,
