@@ -1,0 +1,101 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+import "lib/json";
+
+fun compare([Json] left, [Json] right) > bool? {
+    foreach (int i, Json leftItem in left) {
+        if (right.len() > i) {
+            | print("Comparing: {leftItem.encode()} with {right[i].encode()}");
+            if (leftItem.integer != null and right[i].integer != null) {
+                if (leftItem.integerValue() < right[i].integerValue()) {
+                    return true;
+                } else if (leftItem.integerValue() > right[i].integerValue()) {
+                    return false;
+                }
+            } else if (leftItem.list != null or right[i].list != null) {
+                if (compare(left: leftItem.list ?? [leftItem], right: right[i].list ?? [right[i]]) -> compared) {
+                    return compared;
+                }
+            }
+        } else {
+            | print("Right is smaller list: out of order");
+            return false;
+        }
+    }
+
+    | print("Content of list could not decide");
+    if (left.len() < right.len()) {
+        | print("Left is smaller: in order");
+        return true;
+    } else if (left.len() > right.len()) {
+        | print("Left is larger: out of order");
+        return false;
+    }
+
+    | print("Left and right of same length: can't decide");
+    return null;
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day13.txt", mode: FileMode.read);
+    
+    int orderedCount = 0;
+    [Json] allPackets = [<Json>];
+    [Json] packets = [<Json>];
+    int i = 1;
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        if (line?.len() == 0) {
+            | Compare
+            assert(packets.len() == 2, message: "not a pair");
+
+            [Json] left = packets[0].listValue();
+            [Json] right = packets[1].listValue();
+            
+            packets = [<Json>];
+
+            if (compare(left: left, right: right) -> compared) {
+                if (compared) {
+                    | print("{i}: {Json{list = left}.encode()} < {Json{list = right}.encode()}");
+                    orderedCount = orderedCount + i;
+                } else {
+                    | print("{i}: {Json{list = left}.encode()} > {Json{list = right}.encode()}");
+                }
+            } else {
+                | print("could not decide");
+            }
+
+            i = i + 1;
+        } else {
+            packets.append(Json.decode(line ?? "") catch Json{});
+            allPackets.append(packets[packets.len() - 1]);
+        }
+    }
+
+    print("Sum of ordered packets indices: {orderedCount}");
+
+    | Part 2
+
+    | Add dividers
+    allPackets.append(Json.decode("[[2]]") catch Json{});
+    allPackets.append(Json.decode("[[6]]") catch Json{});
+
+    | Sort packets
+    allPackets.sort(
+        fun (Json left, Json right)
+            -> compare(left: left.listValue(), right: right.listValue()) ?? false
+    );
+
+    | Find dividers
+    int decoderKey = 1;
+    foreach (int index, Json packet in allPackets) {
+        str encoded = packet.encode();
+        if (encoded == "[[2]]" or encoded == "[[6]]") {
+            decoderKey = decoderKey * (index + 1);
+        }
+    }
+
+    print("Decoder key is {decoderKey}");
+
+    file.close();
+}
