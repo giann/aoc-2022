@@ -1,0 +1,192 @@
+import "lib/std";
+import "lib/io";
+import "lib/errors";
+
+fun max(int a, int b) > int -> if (a > b) a else b;
+fun min(int a, int b) > int -> if (a < b) a else b;
+fun abs(int a) > int -> if (a < 0) a * -1 else a;
+
+object Point {
+    int x,
+    int y,
+
+    static fun fromString(str raw) > Point {
+        [str] coordinates = raw.split(",");
+
+        assert(coordinates.len() == 2, message: "could not parse point `{raw}`");
+
+        return Point{
+            x = parseInt(coordinates[0]) ?? 0,
+            y = parseInt(coordinates[1]) ?? 0,
+        };
+    }
+
+    fun distance(Point other) > int
+        -> max(a: abs(other.x - this.x), b: abs(other.y - this.y))
+    
+    fun toString() > str -> "{this.x},{this.y}"
+}
+
+object Rock {
+    [Point] points,
+
+    static fun fromString(str raw) > Rock {
+        [str] rawPoints = raw.split(" -> ");
+
+        [Point] points = [<Point>];
+        foreach (int i, str point in rawPoints) {
+            points.append(Point.fromString(point));
+        }
+
+        return Rock{
+            points = points,
+        };
+    }
+
+    fun draw([[str]] grid) > void {
+        foreach (int i, Point point in this.points) {
+            if (i == this.points.len() - 1) {
+                break;
+            }
+
+            Point nextPoint = this.points[i + 1];
+
+            if (point.x == nextPoint.x) {
+                int toY = max(a: point.y, b: nextPoint.y);
+                for (int y = min(a: point.y, b: nextPoint.y); y <= toY; y = y + 1) {
+                    grid[y][point.x] = "#";
+                }
+            } else {
+                assert(point.y == nextPoint.y, message: "diagonal line?");
+
+                int toX = max(a: point.x, b: nextPoint.x);
+                for (int x = min(a: point.x, b: nextPoint.x); x <= toX; x = x + 1) {
+                    grid[point.y][x] = "#";
+                }
+            }
+        }
+    }
+}
+
+fun drawGrid([[str]] grid, int startX, int startY, int stopX, int stopY) > void {
+    for (int y = startY; y <= stopY; y = y + 1) {
+        for (int x = startX; x <= stopX; x = x + 1) {
+            stdout.write(grid[y][x]) catch void;
+        }
+        stdout.write("\n") catch void;
+    }
+}
+
+fun dropSand([[str]] grid, bool part1) > bool {
+    Point sand = Point{ x = 500, y = 0 };
+    int width = grid[0].len();
+    int height = grid.len();
+
+    while (true) {
+        | Fallen in the abyss, stop here
+        if (part1 and sand.y + 1 >= height) {
+            return true;
+        }
+
+        if (grid[sand.y + 1][sand.x] == ".") { | Air, move the sand
+            sand.y = sand.y + 1;
+        } else if (sand.x - 1 >= 0 and grid[sand.y + 1][sand.x - 1] == ".") { | Hits something look down left
+            sand.y = sand.y + 1;
+            sand.x = sand.x - 1;
+        } else if (sand.x + 1 < width and grid[sand.y + 1][sand.x + 1] == ".") { | Hits something look down right
+            sand.y = sand.y + 1;
+            sand.x = sand.x + 1;
+        } else {
+            break;
+        }
+    }
+
+    if (!part1 and sand.x == 500 and sand.y == 0) {
+        return true;
+    }
+
+    grid[sand.y][sand.x] = "o";
+
+    return false;
+}
+
+fun main([str] args) > void !> FileNotFoundError, ReadWriteError, FileSystemError, UnexpectedError {
+    File file = File.open("input/day14.txt", mode: FileMode.read);
+
+    [Rock] rocks = [<Rock>];
+    int width = 0;
+    int height = 0;
+    for (str? line = file.readLine(); line != null; line = file.readLine()) {
+        | Parse rock structure
+        rocks.append(Rock.fromString(line ?? ""));
+
+        | Find grid dimensions
+        foreach (int i, Point point in rocks[rocks.len() - 1].points) {
+            if (point.x >= width) {
+                width = point.x;
+            }
+
+            if (point.y >= height) {
+                height = point.y;
+            }
+        }
+    }
+
+    file.close();
+
+    width = width + 1;
+    height = height + 1;
+
+    | Initialize grid
+    [[str]] grid = [<[str]>];
+    for (int y = 0; y < height; y = y + 1) {
+        grid.append([<str>]);
+        for (int x = 0; x < width; x = x + 1) {
+            grid[y].append(".");
+        }
+    }
+
+    | Draw rocks
+    foreach (int i, Rock rock in rocks) {
+        rock.draw(grid);
+    }
+
+    | Drop sands
+    int sand = 0;
+    for (; !dropSand(grid, part1: true); sand = sand + 1) {}
+
+    print("Dropped {sand} units of sand before it started flowing into the abyss");
+
+    | Part 2
+
+    | Initialize grid with floor
+    grid = [<[str]>];
+    for (int y = 0; y < height + 2; y = y + 1) {
+        grid.append([<str>]);
+        for (int x = 0; x < width * 2; x = x + 1) {
+            if (y == height + 1) {
+                grid[y].append("#");
+            } else {
+                grid[y].append(".");
+            }
+        }
+    }
+
+    | Draw rocks
+    foreach (int i, Rock rock in rocks) {
+        rock.draw(grid);
+    }
+
+    sand = 0;
+    for (; !dropSand(grid, part1: false); sand = sand + 1) {}
+
+    | drawGrid(
+    |     grid: grid,
+    |     startX: 489,
+    |     startY: 0,
+    |     stopX: 512,
+    |     stopY: 11,
+    | );
+
+    print("Dropped {sand + 1} units of sand before sand source is blocked");
+}
